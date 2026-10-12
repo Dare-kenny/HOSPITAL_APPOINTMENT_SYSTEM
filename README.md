@@ -68,20 +68,25 @@ Tables are created automatically on startup (`spring.jpa.hibernate.ddl-auto=upda
 
 ### 3. Configure the application
 
-Edit `src/main/resources/application.properties` with your own values:
+Secrets are read from environment variables, never from committed files. Copy the example file and fill in your own values:
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/hospital_database
-spring.datasource.username=YOUR_DB_USER
-spring.datasource.password=YOUR_DB_PASSWORD
-
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=YOUR_EMAIL
-spring.mail.password=YOUR_EMAIL_APP_PASSWORD
+```bash
+cp .env.example .env
 ```
 
+| Variable        | Purpose                                         |
+| --------------- | ----------------------------------------------- |
+| `DB_USERNAME`   | MySQL username                                  |
+| `DB_PASSWORD`   | MySQL password                                  |
+| `MAIL_USERNAME` | Email address that sends booking confirmations  |
+| `MAIL_PASSWORD` | App password for that email account             |
+| `JWT_SECRET`    | Base64 key used to sign JWTs                    |
+
+The app loads `.env` automatically when started from the `HospitalAppointmentSystem` folder. Real environment variables work too and take priority. `.env` is listed in `.gitignore`, so it will not be committed.
+
 ### 4. Run the application
+
+From the `HospitalAppointmentSystem` folder:
 
 ```bash
 mvn spring-boot:run
@@ -254,7 +259,5 @@ mvn test
 
 ## Security notes
 
-Before deploying or sharing this project, keep secrets out of source control:
-
-- Move the database password, email credentials and the JWT signing key (`JwtUtil.SECRET_KEY`) into environment variables or an untracked config file.
+- Never commit `.env` or put real credentials in `application.properties`.
 - `SecretKeyGenerator` (in the test sources) can generate a new JWT signing key.
