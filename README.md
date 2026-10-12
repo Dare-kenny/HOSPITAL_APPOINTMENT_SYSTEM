@@ -28,78 +28,47 @@ Patients can register, browse open time slots and book an appointment. Doctors c
 
 ```
 HospitalAppointmentSystem/
-├── pom.xml
-└── src/main/java/com/example/HospitalAppointmentSystem/
-    ├── controllers/        # REST endpoints (Auth, Patient, Doctor, HOD)
-    ├── services/           # Business logic, authentication, email
-    │   └── entityServices/ # Patient, Doctor and HOD specific services
-    ├── repositories/       # Spring Data JPA repositories
-    ├── models/
-    │   ├── entitySchemas/  # Patient, Doctor, HOD (share a UserEntity base)
-    │   ├── otherSchemas/   # AllSlots, Appointment
-    │   └── enums/          # Role, BookingStatus, DayOfTheWeek
-    ├── dtos/               # Request and response objects
-    └── configurations/     # Security config and JWT filter/utility
+|-- pom.xml
+`-- src/main/java/com/example/HospitalAppointmentSystem/
+    |-- controllers/        # REST endpoints (Auth, Patient, Doctor, HOD)
+    |-- services/           # Business logic, authentication, email
+    |   `-- entityServices/ # Patient, Doctor and HOD specific services
+    |-- repositories/       # Spring Data JPA repositories
+    |-- models/
+    |   |-- entitySchemas/  # Patient, Doctor, HOD (share a UserEntity base)
+    |   |-- otherSchemas/   # AllSlots, Appointment
+    |   `-- enums/          # Role, BookingStatus, DayOfTheWeek
+    |-- dtos/               # Request and response objects
+    `-- configurations/     # Security config and JWT filter/utility
 ```
 
-## Getting started
+## Setup
 
-### Prerequisites
+Requirements: JDK 24, Maven 3.9+, MySQL, and an email account that can send over SMTP (for Gmail, use an [App Password](https://support.google.com/accounts/answer/185833)).
 
-- JDK 24
-- Maven 3.9+
-- A running MySQL server
-- An email account that can send over SMTP (for Gmail, create an [App Password](https://support.google.com/accounts/answer/185833))
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/dare-kenny/hospital_appointment_system.git
-cd hospital_appointment_system/HospitalAppointmentSystem
-```
-
-### 2. Create the database
+Create the database (tables are created automatically on startup):
 
 ```sql
 CREATE DATABASE hospital_database;
 ```
 
-Tables are created automatically on startup (`spring.jpa.hibernate.ddl-auto=update`).
+Copy `.env.example` to `.env` inside `HospitalAppointmentSystem/` and fill in your values. `.env` is ignored by git.
 
-### 3. Configure the application
+| Variable        | Purpose                                        |
+| --------------- | ---------------------------------------------- |
+| `DB_USERNAME`   | MySQL username                                 |
+| `DB_PASSWORD`   | MySQL password                                 |
+| `MAIL_USERNAME` | Email address that sends booking confirmations |
+| `MAIL_PASSWORD` | App password for that email account            |
+| `JWT_SECRET`    | Base64 key used to sign JWTs                   |
 
-Secrets are read from environment variables, never from committed files. Copy the example file and fill in your own values:
-
-```bash
-cp .env.example .env
-```
-
-| Variable        | Purpose                                         |
-| --------------- | ----------------------------------------------- |
-| `DB_USERNAME`   | MySQL username                                  |
-| `DB_PASSWORD`   | MySQL password                                  |
-| `MAIL_USERNAME` | Email address that sends booking confirmations  |
-| `MAIL_PASSWORD` | App password for that email account             |
-| `JWT_SECRET`    | Base64 key used to sign JWTs                    |
-
-The app loads `.env` automatically when started from the `HospitalAppointmentSystem` folder. Real environment variables work too and take priority. `.env` is listed in `.gitignore`, so it will not be committed.
-
-### 4. Run the application
-
-From the `HospitalAppointmentSystem` folder:
+Run it from the `HospitalAppointmentSystem` folder. The API starts on `http://localhost:8080`.
 
 ```bash
 mvn spring-boot:run
 ```
 
-The API starts on `http://localhost:8080`.
-
-### 5. Create an HOD account
-
-For security, HODs cannot sign up through the API. Insert one directly into the database:
-
-1. Generate a BCrypt hash of the password by running `PasswordHasher` (in `src/test/java/.../PasswordHasher.java`) and entering the password when prompted.
-2. Insert the HOD row using that hash:
+HODs cannot sign up through the API. Hash a password with `PasswordHasher` (in the test sources), then insert the HOD directly:
 
 ```sql
 INSERT INTO hod (name, email, password, role, department)
@@ -109,12 +78,9 @@ VALUES ('Jane Smith', 'jane.smith@example.com', '<bcrypt-hash>', 'HOD', 'Cardiol
 ## How it works
 
 ```
-HOD  ──registers──▶  Doctor (with weekly 2 hour slots)
-                         │
-Patient ──views available slots──▶ books a slot ──▶ Appointment saved
-                                                  └─▶ confirmation email sent
-                         │
-Doctor ──views schedule (booked appointments)
+HOD     -> registers a Doctor with weekly 2 hour slots
+Patient -> views available slots -> books a slot -> appointment saved + confirmation email sent
+Doctor  -> views their schedule of booked appointments
 ```
 
 ## API reference
@@ -230,34 +196,8 @@ On success the slot is marked as booked, the appointment is saved and a confirma
 ]
 ```
 
-## Example session with curl
-
-```bash
-# 1. Register and log in as a patient
-curl -X POST http://localhost:8080/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"John Doe","email":"john.doe@example.com","password":"password123","phoneNumber":"08012345678"}'
-
-TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"john.doe@example.com","password":"password123"}')
-
-# 2. See what is available and book a slot
-curl http://localhost:8080/patient/view-available-Slots -H "Authorization: Bearer $TOKEN"
-
-curl -X POST http://localhost:8080/patient/book-Appointment \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"slotId":1}'
-```
-
 ## Running tests
 
 ```bash
 mvn test
 ```
-
-## Security notes
-
-- Never commit `.env` or put real credentials in `application.properties`.
-- `SecretKeyGenerator` (in the test sources) can generate a new JWT signing key.
